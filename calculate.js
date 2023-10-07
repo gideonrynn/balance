@@ -1,10 +1,3 @@
-let jsondata = [];
-let recentDebits = [];
-
-// TODO: add node file check, if doesn't exist, point to default statements folder
-// Note that when using liveserver, you will encounter "Not allowed to load local resource" error in the console with current config
-//let statementsPath = 'C:\\Users\\dilki\\OneDrive\\Documents\\Bills\\statements\\costs.json';
-// there are some workarounds I don't care for with this, so for now just make sure the file is accessible within the project
 let statementsPath = './statements-actual/costs.json';
 
 // overall divs
@@ -12,47 +5,39 @@ let month = document.getElementById("validdate");
 let comments = document.getElementById("goals");
 let error = document.getElementById("error");
 let remainingDiv = document.getElementById("remaining");
-
-// checking divs
-let checkingDiv = document.getElementById("checking-items");
-let totalCheckingDiv = document.getElementById("total-checking-items");
-
-// savings divs
-let savingsDiv = document.getElementById("savings-items");
-let totalSavingsDiv = document.getElementById("total-savings-items");
-
-// credit card divs
-let totalChaseDiv = document.getElementById("total-chase-items");
-let chaseDiv = document.getElementById("chase-auto-items");
-let cardsDiv = document.getElementById("cards");
+let detailsDiv = document.getElementById("details");
 
 // fetch the data kept in the costs.json
-// create a section for each item in the monthOfFinances
+// create a section for each item in the sectionData
 // render details in those sections based on certain rules
 
-// function createItemsFromJSON(appendingExpenseDiv, regularExpenses, totalDiv, cashRemainingDiv, income, savings, currentChecking) {
+function createSectionFromJSON(sectionTitle, sectionData) {
 
-function createSectionFromJSON(sectionDiv, monthOfFinances) {
+    // validate that sectionTitle is a string and sectionData is an object
 
     // passed in expenses must be set
-    let expenses = monthOfFinances.debits;
-    let income = monthOfFinances.credits.income;
-    let fromSavings = monthOfFinances.credits.from_savings;
-    let currentChecking = monthOfFinances.current;
+    let expenses = sectionData.debits;
+    let credits = sectionData.credits ?? 0;
+    let currentChecking = sectionData.current;
+    let notes = sectionData.notes;
 
     // totals and balances have to be calculated
     let totalExpenses = 0;
     let totalCredits = 0;
     let totalRemaining = 0;
 
-    // creating the section title
-    let titleDiv = document.createElement("h2");
+    // create the section
+    let sectionDiv = document.createElement("section");
+    sectionDiv.id = sectionTitle;
+    detailsDiv.appendChild(sectionDiv);
 
+    // create the section title
+    let titleDiv = document.createElement("h2");
+    titleDiv.textContent = sectionTitle.replace('_', ' ');
     sectionDiv.appendChild(titleDiv);
 
-    // just do map here if you can
-
     // object entries will be created for regular expenses and adhoc expenses, so pass both in
+    // this will let us iterate over the keys in an object
     for (let type in expenses) {
         // console.log(`${type}: ${expenses[type]}`);
         console.log(type);
@@ -63,7 +48,7 @@ function createSectionFromJSON(sectionDiv, monthOfFinances) {
         Object.entries(expenses[type]).forEach(expense => {
             // console.log(expense);
             let expenseDiv = document.createElement("p");
-            expenseDiv.setAttribute("id", expense[0])
+            expenseDiv.setAttribute("id", expense[0]);
             expenseDiv.textContent = `${expense[0]}: $${expense[1]}`;
 
             // use parseFloat to change string to number value to be used in calculations
@@ -72,18 +57,27 @@ function createSectionFromJSON(sectionDiv, monthOfFinances) {
         })
     }
 
+
     // create div with total sum of all expenses
     let newTotalDiv = document.createElement("p");
     newTotalDiv.textContent = `Total expenses: $${totalExpenses.toFixed(2)}`;
     sectionDiv.appendChild(newTotalDiv);
 
 
+    totalRemaining = parseFloat((( credits.income ?? 0) + (credits.fromSavings ?? 0) + currentChecking) - totalExpenses).toFixed(2);
+
     // create div with total remaining funds
-    // if(cashRemainingDiv && income) {
-        // console.log(income)
-        totalRemaining = parseFloat((income + fromSavings + currentChecking) - totalExpenses).toFixed(2);
+    if(credits && sectionTitle === 'checking') {
         remainingDiv.textContent = `Remaining Balance: $${totalRemaining}`;
-    // } 
+    }
+
+    let totalBalanceDiv = document.createElement("p");
+    totalBalanceDiv.textContent = `Remaining Balance: $${totalRemaining}`;
+    sectionDiv.appendChild(totalBalanceDiv);
+
+    let notesDiv = document.createElement("p");
+    notesDiv.textContent = notes;
+    sectionDiv.appendChild(notesDiv);
 
     let separatorDiv = document.createElement("hr");
     sectionDiv.appendChild(separatorDiv);
@@ -94,35 +88,33 @@ function createSectionFromJSON(sectionDiv, monthOfFinances) {
 fetch(statementsPath)
     .then(response => response.json()) // take JSON as input and parse
     .then(data => {     // take the result of the previous call and do things with it
-            console.log(data[0]);
+        console.log(data[0]);
 
-            // data[0] because I only want the most relevant (ie recent) month to work on
-            let currentMonthFinances = data[0];
-            console.log(currentMonthFinances);
+        // data[0] because I only want the most relevant (ie recent) month to work on
+        let currentMonthFinances = data[0];
+        console.log(currentMonthFinances.checking);
 
-            comments.textContent = currentMonthFinances.comment;
-            month.textContent = currentMonthFinances.date
+        comments.textContent = currentMonthFinances.comment;
+        month.textContent = currentMonthFinances.date
+        
+        // evaluate each item and see if it's an object
+        // TODO: alternatively may want to specify the properties for checking, savings and cc
+        for(item in currentMonthFinances) {
 
-            // need to create sections in the html for checking (checkingDiv), savings (savingsDiv), credit cards div
-            
-            // this function should know to create a checking, savings, and cc div no matter what
-            // TODO: think about if I want this to boil this down into creating each section
-            // createItemsFromJSON(checkingDiv, currentMonthFinances.checking, totalCheckingDiv, remainingDiv, currentMonthFinances.income, currentMonthFinances.from_savings, currentMonthFinances.existing_checking);
+            let sectionTitle = item;
+            let sectionData = currentMonthFinances[item];
 
+            if (typeof sectionData == 'object') {
+                console.log("----- Here's the data being set in fetch -----");
+                console.log(sectionTitle + " section of will be created in the html");
+                console.log(sectionData);
 
-            // evaluate each item and see if it's an object - may want to specify the properties for checking, savings and cc
-            // if it is, pass it in
+                createSectionFromJSON(sectionTitle, sectionData);
+            };
 
-            createSectionFromJSON(checkingDiv, currentMonthFinances.checking);
-            // update this to dynamically deal with multiple cards
-            // createItemsFromJSON(cardsDiv, currentMonthFinances.chase_auto);
-            // createItemsFromJSON(cardsDiv, currentMonthFinances.boa_auto);
-            // createItemsFromJSON(cardsDiv, currentMonthFinances.discover_auto);
+        };
 
-            //https://dmitripavlutin.com/access-object-properties-javascript/
-            // console.log(recentCosts.checking.chase_default);
-
-    }) 
+    })
     .catch((error) => {
         console.log(error)
         errorDiv.innerHTML = `<p>Something went wrong when fetching data. Error message: ${error.message}</p>`;
