@@ -11,7 +11,7 @@ let detailsDiv = document.getElementById("details");
 // create a section for each item in the sectionData
 // render details in those sections based on certain rules
 
-function createSectionFromJSON(sectionTitle, sectionData) {
+function createSectionFromJSON(sectionTitle, sectionData, subsection = false) {
 
     // validate that sectionTitle is a string and sectionData is an object
 
@@ -26,21 +26,23 @@ function createSectionFromJSON(sectionTitle, sectionData) {
     let totalCredits = 0;
     let totalRemaining = 0;
 
-    // create the section
     let sectionDiv = document.createElement("section");
-    sectionDiv.id = sectionTitle;
-    detailsDiv.appendChild(sectionDiv);
+    // create the section
 
+        sectionDiv.id = sectionTitle;
+        detailsDiv.appendChild(sectionDiv);
+ 
+    
     // create the section title
     let titleDiv = document.createElement("h2");
-    titleDiv.textContent = sectionTitle.replace('_', ' ');
+    titleDiv.textContent = sectionTitle.replace(/_/g, ' ');
     sectionDiv.appendChild(titleDiv);
 
     // object entries will be created for regular expenses and adhoc expenses, so pass both in
     // this will let us iterate over the keys in an object
     for (let type in expenses) {
         // console.log(`${type}: ${expenses[type]}`);
-        console.log(type);
+        // console.log(type);
 
         // using object entries to generate arrays for each key value pair
         // which allows me to set the id to the key [0] and run totals with the value [1]
@@ -49,7 +51,7 @@ function createSectionFromJSON(sectionTitle, sectionData) {
             // console.log(expense);
             let expenseDiv = document.createElement("p");
             expenseDiv.setAttribute("id", expense[0]);
-            expenseDiv.textContent = `${expense[0]}: $${expense[1]}`;
+            expenseDiv.textContent = `${expense[0].replace(/_/g, ' ')}: $${expense[1]}`;
 
             // use parseFloat to change string to number value to be used in calculations
             totalExpenses += parseFloat(expense[1]);
@@ -57,12 +59,10 @@ function createSectionFromJSON(sectionTitle, sectionData) {
         })
     }
 
-
     // create div with total sum of all expenses
     let newTotalDiv = document.createElement("p");
     newTotalDiv.textContent = `Total expenses: $${totalExpenses.toFixed(2)}`;
     sectionDiv.appendChild(newTotalDiv);
-
 
     totalRemaining = parseFloat((( credits.income ?? 0) + (credits.fromSavings ?? 0) + currentChecking) - totalExpenses).toFixed(2);
 
@@ -102,14 +102,27 @@ fetch(statementsPath)
         for(item in currentMonthFinances) {
 
             let sectionTitle = item;
-            let sectionData = currentMonthFinances[item];
-
-            if (typeof sectionData == 'object') {
+            
+            if (typeof currentMonthFinances[item] == 'object' && sectionTitle === 'checking' || sectionTitle === 'savings' ) {
                 console.log("----- Here's the data being set in fetch -----");
                 console.log(sectionTitle + " section of will be created in the html");
-                console.log(sectionData);
+                console.log(currentMonthFinances[item]);
 
-                createSectionFromJSON(sectionTitle, sectionData);
+                createSectionFromJSON(sectionTitle, currentMonthFinances[item]);
+            };
+
+            if (typeof currentMonthFinances[item] == 'object' && sectionTitle === 'credit_cards') {
+                console.log("----- Here's the data being set in fetch -----");
+                console.log(sectionTitle + " section of will be created in the html");
+                console.log(currentMonthFinances[item]);
+
+                let subSectionData = currentMonthFinances[item];
+
+                for (item in subSectionData){
+                    console.log(item);
+                    createSectionFromJSON(item, subSectionData[item], true);
+                }
+                
             };
 
         };
