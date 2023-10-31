@@ -7,15 +7,23 @@ let error = document.getElementById("error");
 let remainingDiv = document.getElementById("remaining");
 let detailsDiv = document.getElementById("details");
 
+let sections = {
+    'checking': {},
+    'savings': {},
+    'credit_cards': {}
+};
+
 // fetch the data kept in the costs.json
 // create a section for each item in the sectionData
 // render details in those sections based on certain rules
 
+// TODO: render regular versus ad hoc expenses
+// TODO: pass in what section to append things to
 function createSectionFromJSON(sectionTitle, sectionData, subsection = false) {
 
     // validate that sectionTitle is a string and sectionData is an object
 
-    // passed in expenses must be set
+    // passed in expenses must be set as they are adjusted for a given month
     let expenses = sectionData.debits;
     let credits = sectionData.credits ?? 0;
     let currentChecking = sectionData.current;
@@ -26,12 +34,11 @@ function createSectionFromJSON(sectionTitle, sectionData, subsection = false) {
     let totalCredits = 0;
     let totalRemaining = 0;
 
-    let sectionDiv = document.createElement("section");
+    
     // create the section
-
-        sectionDiv.id = sectionTitle;
-        detailsDiv.appendChild(sectionDiv);
- 
+    let sectionDiv = document.createElement("section");
+    sectionDiv.id = sectionTitle;
+    detailsDiv.appendChild(sectionDiv);
     
     // create the section title
     let titleDiv = document.createElement("h2");
@@ -54,6 +61,7 @@ function createSectionFromJSON(sectionTitle, sectionData, subsection = false) {
             expenseDiv.textContent = `${expense[0].replace(/_/g, ' ')}: $${expense[1]}`;
 
             // use parseFloat to change string to number value to be used in calculations
+            // it will also help ensure calculations don't get tripped up by trying to combine strings
             totalExpenses += parseFloat(expense[1]);
             sectionDiv.appendChild(expenseDiv);
         })
@@ -90,15 +98,17 @@ fetch(statementsPath)
     .then(data => {     // take the result of the previous call and do things with it
         console.log(data[0]);
 
-        // data[0] because I only want the most relevant (ie recent) month to work on
+        // data[0] because I only want the most relevant (ie recent) month to work on out of all the many months of expenses in that file
         let currentMonthFinances = data[0];
         console.log(currentMonthFinances.checking);
 
         comments.textContent = currentMonthFinances.comment;
-        month.textContent = currentMonthFinances.date
+        month.textContent = currentMonthFinances.date;
         
         // evaluate each item and see if it's an object
         // TODO: alternatively may want to specify the properties for checking, savings and cc
+        // TODO: pass in true falses for creating sections - rules need to be set on an object somewhere
+        // for example, for checking, remaining balance is true, but for cc remaining balance is false
         for(item in currentMonthFinances) {
 
             let sectionTitle = item;
@@ -119,7 +129,7 @@ fetch(statementsPath)
                 let subSectionData = currentMonthFinances[item];
 
                 for (item in subSectionData){
-                    console.log(item);
+                    // console.log(item);
                     createSectionFromJSON(item, subSectionData[item], true);
                 }
                 
